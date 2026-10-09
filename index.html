@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VisionNav: wearable navigation for blind users | Sudil Minthaka</title>
+<meta name="description" content="VisionNav is a chest-worn guide for blind and low-vision people. It maps the room, finds objects, plans a safe route and speaks clock-direction guidance into one ear. Fully offline.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="VisionNav: wearable navigation for blind users">
+<meta property="og:description" content="Finds the chair, plans the route, says “2 o'clock, 6 feet”. A chest-worn, fully offline guide built on ROS 2, LiDAR SLAM and edge AI.">
+<meta property="og:image" content="assets/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0d14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230a0d14'/%3E%3Cpath d='M50 78 L18 30 A42 42 0 0 1 82 30 Z' fill='%23ffb547' opacity='.85'/%3E%3Ccircle cx='50' cy='78' r='8' fill='%234fd8ff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,600;1,600&family=Silkscreen&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<noscript><style>.rv{opacity:1!important;transform:none!important}.sim-nojs{display:block!important}</style></noscript>
+</head>
+<body>
+
+<header class="nav">
+  <!-- EDIT: your name -->
+  <a class="brand" href="#top">Sudil <em>Minthaka</em></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#try">Try it</a>
+    <a href="#build">Build</a>
+    <!-- EDIT: point this at your email (mailto:you@example.com) or a contact page -->
+    <a class="pill" href="#contact">Get in touch</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="hero-in">
+    <div class="hero-copy">
+      <p class="chip"><span class="dot"></span>Working prototype · tested on the real rig</p>
+      <h1 class="h1">VISION<span>NAV</span></h1>
+      <p class="sub">A wearable guide that finds things, plans the way, and tells you where to walk.</p>
+      <p class="line">LiDAR SLAM · Open-vocabulary AI · Clock-direction voice · Fully offline</p>
+      <div class="row btns">
+        <a class="btn btn-go" href="#action">See it in action ↓</a>
+        <a class="btn" href="#try">Try the button panel</a>
+        <a class="btn" href="https://github.com/SudilMin/VisionNav" rel="noopener">Source on GitHub ↗</a>
+      </div>
+    </div>
+
+    <div class="hero-art">
+    <img class="hero-img" src="assets/hero-concept.webp" width="1024" height="1024" fetchpriority="high" decoding="async"
+         alt="Concept render: a person with a white cane wearing the VisionNav chest rig, with a camera in the centre, a backpack and an earpiece">
+    <figure class="radar-wrap" aria-label="Top-down view of what VisionNav senses: walls from the LiDAR, a chair at 2 o'clock and a door at 11 o'clock, with a planned route to the chair">
+      <svg class="radar" id="radar" viewBox="0 0 400 260" role="img">
+        <defs>
+          <radialGradient id="sweepGrad" cx="200" cy="240" r="220" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#4fd8ff" stop-opacity=".0"/>
+            <stop offset="1" stop-color="#4fd8ff" stop-opacity=".28"/>
+          </radialGradient>
+        </defs>
+        <g class="rings" fill="none" stroke="currentColor">
+          <path d="M60 240 A140 140 0 0 1 340 240"/>
+          <path d="M110 240 A90 90 0 0 1 290 240"/>
+          <path d="M155 240 A45 45 0 0 1 245 240"/>
+          <path d="M20 240 L380 240"/>
+        </g>
+        <g id="clockMarks" class="clock"></g>
+        <g id="wallDots" class="walls"></g>
+        <path class="route" d="M200 240 C 228 232, 258 214, 274 200"/>
+        <g class="obj obj-chair" transform="translate(283 192)">
+          <rect x="-9" y="-9" width="18" height="18" rx="3"/>
+          <text x="14" y="4">chair · 6 ft</text>
+        </g>
+        <g class="obj obj-door" transform="translate(104 66)">
+          <rect x="-12" y="-4" width="24" height="8" rx="2"/>
+          <text x="0" y="18" text-anchor="middle">door · 12 ft</text>
+        </g>
+        <g class="obj obj-table" transform="translate(200 176)">
+          <circle r="8"/>
+          <text x="-14" y="4" text-anchor="end">table · 4 ft</text>
+        </g>
+        <g class="sweep"><path d="M200 240 L200 18 A222 222 0 0 1 247 23 Z" fill="url(#sweepGrad)"/></g>
+        <g class="you"><circle cx="200" cy="240" r="7"/><circle class="ping" cx="200" cy="240" r="7"/></g>
+        <text class="behind" x="200" y="257" text-anchor="middle">nothing behind you is tracked</text>
+      </svg>
+      <figcaption class="ear"><span class="ear-ic" aria-hidden="true">◖</span><span id="earLine" aria-live="off">“Chair at 2 o'clock, 6 feet.”</span></figcaption>
+    </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 WHY ============ -->
+<section class="sec" id="why">
+  <div class="wrap">
+    <p class="kick rv">01 · Why it matters</p>
+    <h2 class="h2 rv">A cane tells you <em>something</em> is there. Not <em>what</em>, or how to get past it.</h2>
+    <p class="lede rv">VisionNav is a chest rig with a camera, a LiDAR and five buttons, plus a laptop in a backpack. It builds a map of the room, remembers where things are, and talks you to them, one short sentence at a time.</p>
+
+    <div class="pairs">
+      <div class="pair rv"><p class="pb"><span class="tag tag-bad">Problem</span>Most wearables forget the chair the moment you turn away</p><p class="pg"><span class="tag tag-good">VisionNav</span>Objects are pinned to a LiDAR SLAM map and kept for the whole session</p></div>
+      <div class="pair rv"><p class="pb"><span class="tag tag-bad">Problem</span>Constant beeps and vibration codes wear you out</p><p class="pg"><span class="tag tag-good">VisionNav</span>One sentence about the most urgent thing. Silence otherwise.</p></div>
+      <div class="pair rv"><p class="pb"><span class="tag tag-bad">Problem</span>“Go straight” walks you into the table</p><p class="pg"><span class="tag tag-good">VisionNav</span>A planned route around obstacles, spoken in feet and clock positions</p></div>
+      <div class="pair rv"><p class="pb"><span class="tag tag-bad">Problem</span>The last few inches: finding the cup on the table</p><p class="pg"><span class="tag tag-good">VisionNav</span>Hand mode guides your hand: “Left 2 inches… Stop.”</p></div>
+      <div class="pair rv"><p class="pb"><span class="tag tag-bad">Problem</span>Cloud AI is slow, costs money and needs a signal</p><p class="pg"><span class="tag tag-good">VisionNav</span>Everything runs offline, on the rig and the laptop</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 HOW ============ -->
+<section class="sec sec-alt" id="how">
+  <div class="wrap">
+    <p class="kick rv">02 · How it works</p>
+    <h2 class="h2 rv">Sense on the chest, think in the backpack, speak in your ear</h2>
+
+    <figure class="flow rv">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Diagram: the chest rig's camera, LiDAR, IMU and buttons go into a Raspberry Pi 5, which streams over Wi-Fi with ROS 2 to the laptop in the backpack. The laptop runs perception, mapping, planning and speech, and talks to the earpiece.">
+        <g class="fbox">
+          <rect x="10" y="40" width="250" height="220" rx="14"/>
+          <text class="fh" x="30" y="72">CHEST RIG</text>
+          <text x="30" y="108">Camera</text><text class="fs" x="160" y="108">objects, depth</text>
+          <text x="30" y="140">RPLiDAR C1</text><text class="fs" x="160" y="140">walls, SLAM</text>
+          <text x="30" y="172">MPU-6050 IMU</text><text class="fs" x="160" y="172">turns</text>
+          <text x="30" y="204">5 buttons</text><text class="fs" x="160" y="204">you</text>
+          <text class="fpi" x="30" y="240">Raspberry Pi 5</text>
+        </g>
+        <g class="flink">
+          <path d="M268 150 L392 150"/>
+          <text x="330" y="136" text-anchor="middle">Wi-Fi</text>
+          <text class="fs" x="330" y="174" text-anchor="middle">ROS 2 DDS</text>
+          <circle class="pkt" r="4" cy="150"><animate attributeName="cx" from="270" to="390" dur="1.4s" repeatCount="indefinite"/></circle>
+        </g>
+        <g class="fbox fbox-brain">
+          <rect x="400" y="20" width="300" height="260" rx="14"/>
+          <text class="fh" x="420" y="52">BACKPACK LAPTOP</text>
+          <text x="420" y="88">See</text><text class="fs" x="510" y="88">YOLOE + Depth Anything V2</text>
+          <text x="420" y="120">Map</text><text class="fs" x="510" y="120">Cartographer SLAM</text>
+          <text x="420" y="152">Plan</text><text class="fs" x="510" y="152">Nav2 Theta* + smoother</text>
+          <text x="420" y="184">Listen</text><text class="fs" x="510" y="184">Whisper</text>
+          <text x="420" y="216">Speak</text><text class="fs" x="510" y="216">Piper TTS</text>
+          <text x="420" y="248">Describe</text><text class="fs" x="510" y="248">Qwen3-VL 2B</text>
+        </g>
+        <g class="flink">
+          <path d="M708 150 L782 150"/>
+          <circle class="pkt" r="4" cy="150"><animate attributeName="cx" from="710" to="780" dur="1.1s" repeatCount="indefinite"/></circle>
+        </g>
+        <g class="fbox fbox-ear">
+          <rect x="790" y="95" width="100" height="110" rx="14"/>
+          <text class="fh" x="840" y="135" text-anchor="middle">EAR</text>
+          <text class="fs" x="840" y="165" text-anchor="middle">“2 o'clock,</text>
+          <text class="fs" x="840" y="185" text-anchor="middle">6 feet”</text>
+        </g>
+      </svg>
+    </figure>
+
+    <ol class="steps">
+      <li class="rv"><span class="n">1</span>The Pi on your chest streams the camera, LiDAR and IMU to the laptop over Wi-Fi.</li>
+      <li class="rv"><span class="n">2</span>The laptop builds a map of the room and pins every object it recognises onto it.</li>
+      <li class="rv"><span class="n">3</span>Ask for something. It plans a safe route there.</li>
+      <li class="rv"><span class="n">4</span>It talks you along the route in feet and clock directions until you arrive.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ 03 FEATURES ============ -->
+<section class="sec" id="features">
+  <div class="wrap">
+    <p class="kick rv">03 · What it can do</p>
+    <h2 class="h2 rv">Five buttons, eight ways to get around</h2>
+
+    <div class="fgrid">
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l5 5"/></svg>
+        <p class="fn">01</p><h3 class="ft">Find anything</h3>
+        <p>Open-vocabulary detection: ask for “the red bottle” or “a screwdriver”, not just a fixed list of classes.</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M4 20c2-6 6-4 8-9s6-5 8-7"/><circle cx="20" cy="4" r="1.5"/><circle cx="4" cy="20" r="1.5"/></svg>
+        <p class="fn">02</p><h3 class="ft">Walk me there</h3>
+        <p>“Go to the chair next to the door.” A route around the furniture, spoken turn by turn until you arrive.</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h7v9M14 3v6h7"/><circle cx="16" cy="16" r="1.5"/></svg>
+        <p class="fn">03</p><h3 class="ft">Remembers the room</h3>
+        <p>Objects stay on the map after you turn away. Move one and it's updated the next time the camera looks.</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 013 0v6M11 11V4a1.5 1.5 0 013 0v7M14 11V6a1.5 1.5 0 013 0v8c0 4-3 7-7 7-3 0-5-2-6-4l-2-4a1.5 1.5 0 012.5-1.5L8 15"/></svg>
+        <p class="fn">04</p><h3 class="ft">The last inch</h3>
+        <p>Hand mode watches your hand and the cup together: “Left 2 inches… Forward 4 inches… Stop.”</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>
+        <p class="fn">05</p><h3 class="ft">Outdoor hazards</h3>
+        <p>Kerbs, holes, head-height branches, zebra crossings and approaching vehicles, with time to collision. Only what's ahead.</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <p class="fn">06</p><h3 class="ft">Describe &amp; ask</h3>
+        <p>A local vision model describes the scene, or answers one question: “What colour is this shirt?”</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>
+        <p class="fn">07</p><h3 class="ft">Knows your people</h3>
+        <p>Face mode recognises people you've introduced and tells you who's there and where.</p>
+      </article>
+      <article class="fcard rv">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+        <p class="fn">08</p><h3 class="ft">Push to talk</h3>
+        <p>Hold a button and speak. Whisper runs on the laptop. No wake word and no microphone always listening.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 ACTION ============ -->
+<section class="sec sec-alt" id="action">
+  <div class="wrap">
+    <p class="kick rv">04 · See it in action</p>
+    <h2 class="h2 rv">Real sensors, real rooms</h2>
+
+    <!-- To add a demo video: put demo.mp4 in assets/ and replace this figure's <img> with
+         <video src="assets/demo.mp4" controls muted playsinline poster="assets/demo-indoor-bottles.webp"></video> -->
+    <figure class="shot rv">
+      <img src="assets/demo-indoor-bottles.webp" width="1600" height="894" loading="lazy" decoding="async"
+           alt="Left: the camera AI tags two bottles on a table at 0.6 metres. Right: RViz shows the same bottles and the table pinned on the LiDAR map.">
+      <figcaption>The camera finds two bottles on a table (left) and they are pinned on the live LiDAR map (right).</figcaption>
+    </figure>
+    <figure class="shot rv">
+      <img src="assets/demo-guidance.webp" width="1600" height="834" loading="lazy" decoding="async"
+           alt="Guidance to a bottle: the terminal shows the spoken lines 'Bear slightly left. Almost there.' and 'Almost there. 2 feet.' next to the map with the bottle and laptop marked.">
+      <figcaption>Walking to the bottle. The terminal shows what was said: “Bear slightly left. Almost there.” → “Almost there. 2 feet.”</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 05 TRY ============ -->
+<section class="sec" id="try">
+  <div class="wrap">
+    <p class="kick rv">05 · Try it</p>
+    <h2 class="h2 rv">Press the buttons</h2>
+    <p class="lede rv">These are the rig's five buttons. <b>Tap</b>, <b>hold</b> (press for about a second) or <b>double tap</b> them and read what VisionNav would say. You can also use keys <kbd>1</kbd>–<kbd>5</kbd>. Start with SENSORS.</p>
+
+    <div class="sim rv" id="sim">
+      <p class="sim-nojs">Turn on JavaScript to try the buttons.</p>
+      <div class="rig">
+        <div class="rig-plate">
+          <div class="rig-cam" aria-hidden="true"><span></span></div>
+          <div class="rig-btns">
+            <button class="rb" data-b="SENSORS" data-k="1"><span>SENSORS</span><kbd>1</kbd></button>
+            <button class="rb" data-b="LOOK" data-k="2"><span>LOOK</span><kbd>2</kbd></button>
+            <button class="rb" data-b="MODE" data-k="3"><span>MODE</span><kbd>3</kbd></button>
+            <button class="rb" data-b="HAND" data-k="4"><span>HAND</span><kbd>4</kbd></button>
+            <button class="rb rb-talk" data-b="TALK" data-k="5"><span>TALK</span><kbd>5</kbd></button>
+          </div>
+          <ul class="leds" aria-label="System state">
+            <li id="ledSensors">sensors</li>
+            <li id="ledMode">indoor</li>
+            <li id="ledHand">hand</li>
+            <li id="ledFace">face</li>
+            <li id="ledNav">route</li>
+          </ul>
+        </div>
+      </div>
+      <div class="earlog">
+        <div class="earlog-bar"><span>Earpiece</span><button id="soundBtn" class="snd" aria-pressed="false">Sound: off</button></div>
+        <ol id="log" aria-live="polite"></ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 GUIDE ============ -->
+<section class="sec sec-alt" id="guide">
+  <div class="wrap">
+    <p class="kick rv">06 · How to use</p>
+    <h2 class="h2 rv">Quick guide</h2>
+    <div class="tbl-wrap rv">
+      <table class="tbl">
+        <thead><tr><th>Button</th><th>Tap</th><th>Hold</th><th>Double tap</th></tr></thead>
+        <tbody>
+          <tr><td>SENSORS</td><td>Camera, LiDAR and IMU on</td><td>Sensors off</td><td>—</td></tr>
+          <tr><td>LOOK</td><td>Describe the scene</td><td>Ask a question</td><td>Vision AI off</td></tr>
+          <tr><td>MODE</td><td>Indoor ↔ outdoor</td><td>Close map and camera, forget the session</td><td>—</td></tr>
+          <tr><td>HAND</td><td>Hand mode on / off</td><td>Say an object, your hand is guided to it</td><td>Face mode on (again: face and hand off)</td></tr>
+          <tr><td>TALK</td><td>What is around me</td><td>Say where to go (indoor)</td><td>Stop navigation</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="guide">
+      <details class="gd rv" open><summary>Start a session</summary><p>Put on the rig and the earpiece. Tap SENSORS. Walk around the room for a moment; the map and the objects fill in as you go.</p></details>
+      <details class="gd rv"><summary>Go somewhere</summary><p>Hold TALK and say where: “the chair”, “the chair next to the door”, “the kitchen”. Follow the voice until it says you've arrived. Double tap TALK to stop at any time.</p></details>
+      <details class="gd rv"><summary>Find something with your hand</summary><p>Tap HAND, then hold HAND and say the object. Move your hand slowly; it says left, right, forward, and “Stop” when the object is at your hand.</p></details>
+      <details class="gd rv"><summary>Go outside</summary><p>Tap MODE. Nothing is mapped outdoors. It only warns you about what is ahead: the most urgent thing, with its distance and which way to step.</p></details>
+      <details class="gd rv"><summary>End the session</summary><p>Hold MODE. The map, the objects and named places are forgotten. Each indoor session starts with a fresh map.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 BUILD ============ -->
+<section class="sec" id="build">
+  <div class="wrap">
+    <p class="kick rv">07 · Under the hood</p>
+    <h2 class="h2 rv">How it was built</h2>
+    <p class="lede rv">Two computers, one ROS 2 graph. The Pi on the chest only reads buttons and streams sensors; the laptop does all the AI, mapping, planning and speech. Nothing leaves the rig.</p>
+
+    <pre class="spec rv"><span class="cmd">$ visionnav --spec</span>
+<b>Chest</b>       Raspberry Pi 5, 5 tactile GPIO buttons
+<b>LiDAR</b>       RPLiDAR C1, 10 Hz, chest height, body filtered out
+<b>Camera</b>      USB camera → compressed JPEG over ROS 2
+<b>IMU</b>         MPU-6050, 100 Hz (turn rate + gravity)
+<b>Compute</b>     Laptop, RTX 2050 4 GB, in a backpack
+<b>Link</b>        Wi-Fi, ROS 2 Jazzy DDS (ROS_DOMAIN_ID=42)
+<b>Detection</b>   YOLOE open-vocabulary, TensorRT
+<b>Depth</b>       Depth Anything V2 metric, calibrated by the LiDAR
+<b>Tracking</b>    Kalman-filtered object tracks
+<b>Mapping</b>     Cartographer SLAM (+ IMU)
+<b>Planning</b>    Nav2 Theta* planner + smoother, semantic costmap
+<b>Speech in</b>   Whisper push-to-talk
+<b>Speech out</b>  Piper TTS, feet + clock directions
+<b>Vision AI</b>   Qwen3-VL 2B via Ollama, local
+<b>Internet</b>    not needed</pre>
+
+    <div class="cols">
+      <div class="col rv">
+        <h3 class="h3">On the chest (Pi)</h3>
+        <ul class="nodes">
+          <li><code>pi_button_panel</code> reads the buttons, starts and stops the sensors</li>
+          <li><code>sllidar_node</code> LiDAR → <code>/scan</code></li>
+          <li><code>phone_camera_publisher</code> camera → JPEG</li>
+          <li><code>mpu6050_imu</code> IMU → <code>/imu/data</code></li>
+        </ul>
+      </div>
+      <div class="col rv">
+        <h3 class="h3">In the backpack (laptop)</h3>
+        <ul class="nodes">
+          <li><code>voice_navigation_assistant</code> buttons, speech, guidance</li>
+          <li><code>object_perception</code> detection, depth, tracking, object map</li>
+          <li><code>semantic_navigator</code> “chair” → approach point → path</li>
+          <li><code>semantic_costmap</code> map + objects + people → costmap</li>
+          <li><code>scene_describer</code> local vision-language model</li>
+          <li><code>web_dashboard</code> live 3D view of everything above</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 08 WHERE ============ -->
+<section class="sec sec-alt" id="where">
+  <div class="wrap">
+    <p class="kick rv">08 · Where it helps</p>
+    <h2 class="h2 rv">Made for the places a cane can't explain</h2>
+    <ul class="uses">
+      <li class="rv"><b>Unfamiliar rooms</b>Hotels, offices, a friend's house: find the door, the chair, the counter.</li>
+      <li class="rv"><b>Everyday objects</b>Keys, cups, the remote: walk to it, then reach for it.</li>
+      <li class="rv"><b>Busy pavements</b>Kerbs, holes, branches and cars, one warning at a time.</li>
+      <li class="rv"><b>Meeting people</b>Know who just walked in, and where they are.</li>
+      <li class="rv"><b>No signal</b>Basements, rural areas, travel: it never needs the internet.</li>
+      <li class="rv"><b>Privacy</b>Camera images and voice stay on your own hardware.</li>
+    </ul>
+    <p class="big rv">See less. Know more. Walk on your own.</p>
+    <div class="row btns center rv">
+      <a class="btn btn-go" href="https://github.com/SudilMin/VisionNav" rel="noopener">Source on GitHub ↗</a>
+      <a class="btn" href="#try">Try the buttons</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot" id="contact">
+  <div class="foot-in">
+    <div>
+      <!-- EDIT: your name and one-line description -->
+      <p class="foot-name">Sudil Minthaka</p>
+      <p class="foot-sub">Robotics · Embedded Systems · Assistive AI</p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/SudilMin" aria-label="GitHub" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 00-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 015.8 0C17.3 4.3 18.3 4.6 18.3 4.6c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0012 .5z"/></svg></a>
+      <!-- EDIT: your LinkedIn URL -->
+      <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 11-.01 5 2.5 2.5 0 01.01-5zM3 9h4v12H3zM9 9h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V21H9z"/></svg></a>
+      <!-- EDIT: mailto:you@example.com -->
+      <a href="#" aria-label="Email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2026 Sudil Minthaka · The hero photo is a concept render; the screenshots are from the real system.</p>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>
