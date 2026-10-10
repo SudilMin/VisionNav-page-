@@ -1,5 +1,7 @@
-// VisionNav page: scroll reveals, the hero radar, and the button-panel simulator.
+// VisionNav page: scroll reveals, spoken earpiece lines, the day carousel,
+// the animation player and the button-panel simulator.
 document.documentElement.classList.add('js');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---- reveal on scroll ---- */
 (() => {
@@ -11,57 +13,204 @@ document.documentElement.classList.add('js');
   els.forEach(e => io.observe(e));
 })();
 
-/* ---- hero radar: clock marks, LiDAR wall points, earpiece ticker ---- */
+/* ---- nav border once the page scrolls ---- */
 (() => {
-  const NS = 'http://www.w3.org/2000/svg';
-  const cx = 200, cy = 240;
-  const clock = document.getElementById('clockMarks');
-  const walls = document.getElementById('wallDots');
-  if (!clock || !walls) return;
+  const nav = document.getElementById('nav');
+  const upd = () => nav.classList.toggle('scrolled', scrollY > 20);
+  addEventListener('scroll', upd, { passive: true });
+  upd();
+})();
 
-  // 12 o'clock is straight ahead; only the front half (9 to 3) is drawn.
-  [9, 10, 11, 12, 1, 2, 3].forEach(h => {
-    const a = ((h % 12) > 6 ? (h % 12) - 12 : (h % 12)) * Math.PI / 6;
-    const t = document.createElementNS(NS, 'text');
-    t.setAttribute('x', (cx + 158 * Math.sin(a)).toFixed(1));
-    t.setAttribute('y', (cy - 158 * Math.cos(a) + 4).toFixed(1));
-    t.setAttribute('text-anchor', 'middle');
-    t.textContent = h;
-    clock.appendChild(t);
+/* ---- "hear this line": read an earpiece line aloud ---- */
+(() => {
+  if (!('speechSynthesis' in window)) return;
+  let current = null;
+  const stop = () => { speechSynthesis.cancel(); current?.classList.remove('on'); current = null; };
+  document.querySelectorAll('.hear').forEach(btn => {
+    btn.hidden = false;
+    btn.addEventListener('click', () => {
+      const was = current;
+      stop();
+      if (was === btn) return;
+      const text = btn.closest('.ear').querySelector('.ear-text').textContent.replace(/[“”]/g, '');
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.02;
+      u.onend = u.onerror = () => { if (current === btn) { btn.classList.remove('on'); current = null; } };
+      current = btn;
+      btn.classList.add('on');
+      speechSynthesis.speak(u);
+    });
   });
+})();
 
-  // A room outline as the LiDAR sees it: left wall, front wall with a door gap, right wall.
-  const segs = [[[40, 236], [40, 66]], [[40, 66], [90, 66]], [[118, 66], [372, 66]], [[372, 66], [372, 236]],
-                [[250, 236], [250, 214]], [[250, 214], [372, 214]]];
-  let seed = 7;
-  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-  segs.forEach(([[x1, y1], [x2, y2]]) => {
-    const n = Math.max(2, Math.round(Math.hypot(x2 - x1, y2 - y1) / 9));
-    for (let i = 0; i <= n; i++) {
-      const c = document.createElementNS(NS, 'circle');
-      c.setAttribute('cx', (x1 + (x2 - x1) * i / n + (rnd() - .5) * 3).toFixed(1));
-      c.setAttribute('cy', (y1 + (y2 - y1) * i / n + (rnd() - .5) * 3).toFixed(1));
-      c.setAttribute('r', 1.6);
-      walls.appendChild(c);
-    }
-  });
-
+/* ---- hero earpiece ticker ---- */
+(() => {
   const lines = [
     '“Chair at 2 o\'clock, 6 feet.”',
-    '“Table at 12 o\'clock, 4 feet. Bear right.”',
-    '“Door at 11 o\'clock, 12 feet.”',
-    '“Almost there. 2 feet.”',
-    '“You have arrived. The chair is in front of you.”',
+    '“Turn right, to 2 o\'clock. 12 feet.”',
+    '“The cup is behind you, 4 feet.”',
+    '“Left 2 inches… Stop. The cup is at your hand.”',
+    '“You have arrived. The chair is at 12 o\'clock, within reach.”',
   ];
   const ear = document.getElementById('earLine');
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!ear || reduceMotion) return;
+  const btn = ear.closest('.ear').querySelector('.hear');
   let i = 0;
   setInterval(() => {
-    if (document.hidden) return;
+    if (document.hidden || btn?.classList.contains('on')) return;
     i = (i + 1) % lines.length;
     ear.style.opacity = 0;
     setTimeout(() => { ear.textContent = lines[i]; ear.style.opacity = 1; }, 300);
-  }, 3200);
+  }, 3600);
+})();
+
+/* ---- scroll progress bar ---- */
+(() => {
+  const bar = document.getElementById('progress');
+  if (!bar) return;
+  const upd = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.setProperty('--p', max > 0 ? Math.min(1, scrollY / max) : 0);
+  };
+  addEventListener('scroll', upd, { passive: true });
+  addEventListener('resize', upd);
+  upd();
+})();
+
+/* ---- a day: sideways rail with arrows and dots ---- */
+(() => {
+  const rail = document.getElementById('rail');
+  if (!rail) return;
+  const slides = [...rail.querySelectorAll('.slide')];
+  const ctl = document.querySelector('.rail-ctl');
+  const [prev, next] = ctl.querySelectorAll('.rail-btn');
+  const dots = document.getElementById('railDots');
+  slides.forEach(() => dots.appendChild(document.createElement('span')));
+  ctl.hidden = false;
+  let cur = -1;
+  const pad = () => parseFloat(getComputedStyle(rail).scrollPaddingInlineStart) || 0;
+  function mark() {
+    const x = rail.scrollLeft + pad();
+    let best = 0;
+    slides.forEach((sl, i) => { if (Math.abs(sl.offsetLeft - x) < Math.abs(slides[best].offsetLeft - x)) best = i; });
+    if (best === cur) return;
+    cur = best;
+    slides.forEach((sl, i) => sl.classList.toggle('cur', i === cur));
+    [...dots.children].forEach((d, i) => d.classList.toggle('on', i === cur));
+    prev.disabled = cur === 0;
+    next.disabled = cur === slides.length - 1;
+  }
+  const go = i => rail.scrollTo({ left: slides[i].offsetLeft - pad(), behavior: reduceMotion ? 'auto' : 'smooth' });
+  prev.addEventListener('click', () => go(Math.max(0, cur - 1)));
+  next.addEventListener('click', () => go(Math.min(slides.length - 1, cur + 1)));
+  rail.addEventListener('keydown', e => {
+    if (e.target !== rail) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.min(slides.length - 1, cur + 1)); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.max(0, cur - 1)); }
+  });
+  // clicking a faded neighbour brings it to the front
+  slides.forEach((sl, i) => sl.addEventListener('click', e => {
+    if (i === cur) return;
+    e.preventDefault();
+    e.stopPropagation();
+    go(i);
+  }, true));
+  rail.addEventListener('scroll', () => requestAnimationFrame(mark), { passive: true });
+  addEventListener('resize', mark);
+  mark();
+})();
+
+/* ---- cards light up where the pointer is ---- */
+document.querySelectorAll('.glowcard').forEach(el => el.addEventListener('pointermove', e => {
+  const r = el.getBoundingClientRect();
+  el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  el.style.setProperty('--my', `${e.clientY - r.top}px`);
+}));
+
+/* ---- result numbers count up once ---- */
+(() => {
+  const els = document.querySelectorAll('.count');
+  if (reduceMotion || !('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target);
+    const el = e.target, to = parseFloat(el.dataset.to), dec = +(el.dataset.dec || 0), t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / 1400), v = to * (1 - Math.pow(1 - k, 3));
+      el.textContent = v.toFixed(dec);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }), { threshold: .6 });
+  els.forEach(el => io.observe(el));
+})();
+
+/* ---- animation player: pick a clip; it loops silently while on screen ---- */
+(() => {
+  const v = document.getElementById('watchVid');
+  if (!v) return;
+  const player = v.closest('.player');
+  const list = player.querySelector('.player-list');
+  const btns = [...list.querySelectorAll('.pl')];
+  const ext = v.canPlayType('video/webm; codecs="vp9"') ? 'webm' : 'mp4';
+  player.classList.add('ready');
+  list.hidden = false;
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', x === b));
+    v.poster = `assets/${b.dataset.v}-poster.webp`;
+    v.src = `assets/${b.dataset.v}.${ext}`;
+    v.setAttribute('aria-label', b.dataset.label);
+    if (!reduceMotion) v.play().catch(() => {});
+  }));
+  if (reduceMotion || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) v.play().catch(() => {}); else v.pause();
+  }, { threshold: .4 }).observe(v);
+})();
+
+/* ---- demo video: YouTube loads only when you press play ---- */
+(() => {
+  const link = document.getElementById('ytLink');
+  if (!link) return;
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const f = document.createElement('iframe');
+    f.src = `https://www.youtube-nocookie.com/embed/${link.dataset.id}?autoplay=1&rel=0`;
+    f.title = 'VisionNav: what if AI could be your eyes? (YouTube)';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    link.replaceWith(f);
+    f.focus();
+  });
+})();
+
+/* ---- footer email / phone: show the detail instead of opening an app ---- */
+(() => {
+  const btns = [...document.querySelectorAll('.reveal button')];
+  const close = except => btns.forEach(b => {
+    if (b === except) return;
+    b.setAttribute('aria-expanded', 'false');
+    document.getElementById(b.getAttribute('aria-controls')).hidden = true;
+  });
+  btns.forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = b.getAttribute('aria-expanded') !== 'true';
+    close(b);
+    b.setAttribute('aria-expanded', open);
+    document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+  }));
+  document.addEventListener('click', e => { if (!e.target.closest('.reveal')) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+})();
+
+/* ---- silent loops (live map) play only while on screen ---- */
+(() => {
+  const vids = document.querySelectorAll('video[data-auto]');
+  if (reduceMotion || !('IntersectionObserver' in window)) { vids.forEach(v => { v.controls = true; }); return; }
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (e.isIntersecting) e.target.play().catch(() => {}); else e.target.pause();
+  }), { threshold: .35 });
+  vids.forEach(v => io.observe(v));
 })();
 
 /* ---- button-panel simulator ---- */
@@ -162,7 +311,7 @@ document.documentElement.classList.add('js');
         if (st.face) { Object.assign(st, { face: false, hand: false }); return say('Face and hand mode off.'); }
         st.face = true;
         say('Face mode on.');
-        return seq([[1500, () => say('Alex is at 1 o\'clock, 8 feet.')]]);
+        return seq([[1500, () => say('Kamal is at 1 o\'clock, 8 feet.')]]);
       }
       if (g === 'hold') {
         if (!st.hand) return say('Tap HAND first to turn on hand mode.');
