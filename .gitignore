@@ -1,0 +1,13 @@
+# Editor settings and the VS Code C/C++ symbol database
+.vscode/
+.idea/
+*.swp
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
